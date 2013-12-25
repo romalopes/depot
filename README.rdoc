@@ -1,2 +1,119 @@
 == README
 
+$ rails new depot
+
+$ rails generate scaffold Product title:string description:text image_url:string price:decimal
+
+Creates 
+	depot_a/db/migrate/20110211000001_create_products.rb
+		class CreateProducts < ActiveRecord::Migration
+			def self.up
+				create_table :products do |t|
+					t.string :title
+					t.text :description
+					t.string :image_url
+					t.decimal :price, :precision => 8, :scale => 2
+					t.timestamps
+				end
+			end
+		end
+
+$ rake db:migrate
+
+$ rails server
+
+depot_b/db/seeds.rb
+	Product.delete_all
+	# . . .
+	Product.create(:title => 'Programming Ruby 1.9',
+	:description =>
+	%{<p>
+	Ruby is the fastest growing and most exciting dynamic language
+	out there. If you need to get working programs delivered fast,
+	you should add Ruby to your toolbox.
+	</p>},
+	:image_url => '/images/ruby.jpg',
+	:price =
+
+Validation
+	In app/models/product.rb:
+		class Product < ActiveRecord::Base
+			validates :title, :description, :image_url, :presence => true
+			validates :title, :uniqueness => true
+			validates :price, :numericality => {:greater_than_or_equal_to => 0.01}
+			validates :image_url, :format => { :with => %r{\.(gif|jpg|png)$}i,
+											:message => 'must be a URL for GIF, JPG or PNG image.'
+										}
+		end
+
+	$ rake test
+
+	create the test.  In this case is unit test
+
+		depot_c/test/functional/products_controller_test.rb
+		depot_c/test/unit/product_test.rb
+
+Catalog Display
+	Creating the Catalog Listing
+		Create the controller store
+
+		rails generate controller store index
+			   create  app/controllers/store_controller.rb
+		       route  get "store/index"
+		      invoke  erb
+		      create    app/views/store
+		      create    app/views/store/index.html.erb
+		      invoke  test_unit
+		      create    test/controllers/store_controller_test.rb
+		      invoke  helper
+		      create    app/helpers/store_helper.rb
+		      invoke    test_unit
+		      create      test/helpers/store_helper_test.rb
+		      invoke  assets
+		      invoke    coffee
+		      create      app/assets/javascripts/store.js.coffee
+		      invoke    scss
+		      create      app/assets/stylesheets/store.css.scss
+	In config/routes.rb
+		Include the rout to store->index
+		Depot::Application.routes.draw do
+			get "store/index"
+			resources :products
+			# ...
+			# You can have the root of your site routed with "root"
+			# just remember to delete public/index.html.
+			# root :to => "welcome#index"
+			root :to => 'store#index' , :as => 'store'
+			#
+		end
+
+		Instead http://localhost:3000/store/index with this root, store/index is accessed using http://localhost:3000/store/
+
+	In depot_d/app/controllers/store_controller.rb
+		class StoreController < ApplicationController
+				def index
+					@products = Product.all
+				end
+			end
+
+	Include a default_scope to define the order of each query
+
+		depot_d/app/models/product.rb
+			class Product < ActiveRecord::Base
+				default_scope :order => 'title'
+				# validation
+			end
+
+    fill depot/app/views/store/index.html.erb	
+
+    change the depot/app/views/layouts/application.html.erb
+
+    The CSS
+    	create a file public/stylesheets/depot.css
+
+    Using Helper to format price
+    	In index.html.erb
+    		<span class="price"><%= number_to_currency(product.price) %></span>
+
+    	put more test in products_controller_test.rb
+    	
