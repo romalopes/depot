@@ -16,5 +16,6 @@ out there. If you need to get working programs delivered fast,
 you should add Ruby to your toolbox.
 </p>},
 :image_url => '/images/ruby.jpg',
-:price => 49.50)
+:price => 49.50,
+:date_creation => Date.today)
 # . . .

@@ -53,6 +53,15 @@ Validation
 		depot_c/test/functional/products_controller_test.rb
 		depot_c/test/unit/product_test.rb
 
+Fixtures(YAML or yml)
+	Has data to test
+	The name of the file must be the same as the table in database
+	Ex: test/fixtures/products.yml
+	It has the entry of each row to be inserted in database
+	To load the data
+		class ProductTest < ActiveSupport::TestCase
+			fixtures :products
+
 Catalog Display
 	Creating the Catalog Listing
 		Create the controller store
@@ -116,4 +125,173 @@ Catalog Display
     		<span class="price"><%= number_to_currency(product.price) %></span>
 
     	put more test in products_controller_test.rb
-    	
+
+Chart Creation
+	$ rails generate scaffold cart
+	      invoke  active_record
+	      create    db/migrate/20131226000221_create_carts.rb
+	      create    app/models/cart.rb
+	      invoke    test_unit
+	      create      test/models/cart_test.rb
+	      create      test/fixtures/carts.yml
+	      invoke  resource_route
+	       route    resources :carts
+	      invoke  scaffold_controller
+	      create    app/controllers/carts_controller.rb
+	      invoke    erb
+	      create      app/views/carts
+	      create      app/views/carts/index.html.erb
+	      create      app/views/carts/edit.html.erb
+	      create      app/views/carts/show.html.erb
+	      create      app/views/carts/new.html.erb
+	      create      app/views/carts/_form.html.erb
+	      invoke    test_unit
+	      create      test/controllers/carts_controller_test.rb
+	      invoke    helper
+	      create      app/helpers/carts_helper.rb
+	      invoke      test_unit
+	      create        test/helpers/carts_helper_test.rb
+	      invoke    jbuilder
+	      create      app/views/carts/index.json.jbuilder
+	      create      app/views/carts/show.json.jbuilder
+	      invoke  assets
+	      invoke    coffee
+	      create      app/assets/javascripts/carts.js.coffee
+	      invoke    scss
+	      create      app/assets/stylesheets/carts.css.scss
+	      invoke  scss
+	   identical    app/assets/stylesheets/scaffolds.css.scss
+
+	$ rake db:migrate
+
+	Change application_controller.rb to get the cart from session.
+
+	Create the line_item using scaffold.  A connection between product and cart
+
+		$ rails generate scaffold line_item product_id:integer cart_id:integer
+
+		$ rake db:migrate
+
+	In app/models/cart.rb
+		class Cart < ActiveRecord::Base
+			has_many :line_items, :dependent => :destroy
+		end
+	In app/models/line_item.rb
+		class LineItem < ActiveRecord::Base
+			belongs_to :product
+			belongs_to :cart
+		end
+	In app/models/producs.rb
+		class Product < ActiveRecord::Base
+			default_scope :order => 'title'	
+			
+			has_many :line_items
+			
+			before_destroy :ensure_not_referenced_by_any_line_item
+			# ensure that there are no line items referencing this product
+			def ensure_not_referenced_by_any_line_item
+				if line_items.count.zero?
+					return true
+				else
+					errors.add(:base, 'Line Items present' )
+					return false
+				end
+			end
+	Include link to add to cart in store/index.html.erb
+		<div class="price_line" >
+			<span class="price" ><%= number_to_currency(product.price) %></span>
+			<%= button_to 'Add to Cart' , line_items_path(:product_id => product) %>
+		</div>
+
+	In controllers/line_items_controller.rb, include the method to create.
+
+
+A Smarter cat
+	$ rails generate migration add_quantity_to_line_item quantity:integer
+		  invoke  active_record
+	      create    db/migrate/20131226042106_add_quantity_to_line_item.rb
+	Create a migration file to add quality to line_item.  Add the quality column.
+	class AddQuantityToLineItem < ActiveRecord::Migration
+		def self.up
+			add_column :line_items, :quantity, :integer, :default => 1
+		end
+		def self.down
+			remove_column :line_items, :quantity
+		end
+	end
+
+	Include a add_product method to the Cart in models/cart.rb
+	def add_product(product_id)
+		current_item = line_items.where(:product_id => product_id).first
+		if current_item
+			current_item.quantity += 1
+		else
+			current_item = line_items.build(:product_id => product_id)
+		end
+		current_item
+	end
+
+	Modify the controller/create of controllers/line_items_controller.rb
+	def create
+		@cart = current_cart
+		product = Product.find(params[:product_id])
+		@line_item = @cart.add_product(product.id)
+		respond_to do |format|
+			if @line_item.save
+				format.html { redirect_to(@line_item.cart, :notice => 'Line item was successfully created.' ) }
+				format.xml { render :xml => @line_item, :status => :created, :location => @line_item }
+			else
+				format.html { render :action => "new" }
+				format.xml { render :xml => @line_item.errors, :status => :unprocessable_entity }
+			end
+		end
+	end
+
+	and the carts/show.html.erb to reflect the change of quantity
+	<h2>Your Pragmatic Cart</h2>
+	<ul>
+		<% @cart.line_items.each do |item| %>
+			<li><%= item.quantity %> &times; <%= item.product.title %></li>
+		<% end %>
+	</ul>
+
+
+	Create a new migrate to remove the items already created and recreate with the quantity
+		$ rails generate migration combine_items_in_cart
+		      invoke  active_record
+		      create    db/migrate/20131226045904_combine_items_in_cart.rb
+
+		And create this methods
+		def self.up
+			# replace multiple items for a single product in a cart with a single item
+			Cart.all.each do |cart|
+				# count the number of each product in the cart
+				sums = cart.line_items.group(:product_id).sum(:quantity)
+				sums.each do |product_id, quantity|
+					if quantity > 1
+						# remove individual items
+						cart.line_items.where(:product_id=>product_id).delete_all
+						# replace with a single item
+						cart.line_items.create(:product_id=>product_id, :quantity=>quantity)
+					end
+				end
+			end
+		end
+
+	$ rake db:migrate
+
+	To handle with erros
+		Change the cart_controller to receiver wrong product id.
+			def show
+				begin
+					@cart = Cart.find(params[:id])
+				rescue ActiveRecord::RecordNotFound
+					logger.error "Attempt to access invalid cart #{params[:id]}"
+					redirect_to store_url, :notice => 'Invalid cart'
+				else
+					respond_to do |format|
+						format.html # show.html.erb
+						format.xml { render :xml => @cart }
+					end
+				end
+			end
