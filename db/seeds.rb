@@ -18,4 +18,13 @@ you should add Ruby to your toolbox.
 :image_url => '/images/ruby.jpg',
 :price => 49.50,
 :date_creation => Date.today)
+
+Product.create(:title => 'Design Patters',
+:description =>
+%{<p>
+Book of gang of four about design patters.
+</p>},
+:image_url => '/images/designpatterns.jpg',
+:price => 25.50,
+:date_creation => Date.today)
 # . . .

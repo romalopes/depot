@@ -35,6 +35,8 @@ depot_b/db/seeds.rb
 	:image_url => '/images/ruby.jpg',
 	:price =
 
+	$ rake db:seed
+
 Validation
 	In app/models/product.rb:
 		class Product < ActiveRecord::Base
@@ -295,3 +297,43 @@ A Smarter cat
 					end
 				end
 			end
+	To empty cart
+		In cat/show.html.erb
+			<%= button_to 'Empty cart' , @cart, :method => :delete, :confirm => 'Are you sure?' %>
+
+		In controllers/carts_controller.rb
+			Empty the cart
+			def destroy
+				@cart = current_cart
+				@cart.destroy
+				session[:cart_id] = nil
+				respond_to do |format|
+					format.html { redirect_to(store_url, :notice => 'Your cart is currently empty' ) }
+					format.xml { head :ok }
+				end
+			end
+
+Add a Dash of Ajax		
+	Include partials
+		carts/_cart.html.erb
+
+		line_item/_line_item.html.erb
+			<% if line_item == @current_item %>
+				<tr id="current_item" >
+			<% else %>
+				<tr>
+			<% end %>
+					<td><%= line_item.quantity %>&times;</td>
+					<td><%= line_item.product.title %></td>
+					<td class="item_price" ><%= number_to_currency(line_item.total_price) %></td>
+				</tr>
+	In store/index.html.erb
+		<%= button_to 'Add to Cart' , line_items_path(:product_id => product), :remote => true %>
+	Change the line_items_controller.rb to receive the ajax and send to a js
+		format.js { @current_item = @line_item }
+	And create a views/line_items/create.js.rjs
+		page.replace_html('cart' , render(@cart))
+		page[:cart].visual_effect :blind_down if @cart.total_items == 1
+		page[:current_item].visual_effect :highlight, :startcolor => "#88ff88", :endcolor => "#114411"
+
+	in layouts/application.html.erb
