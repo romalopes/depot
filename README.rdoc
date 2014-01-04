@@ -587,3 +587,6 @@ Logging in
 
 		class SessionsController < ApplicationController
 			skip_before_filter :authorize
+
+		class CartsController < ApplicationController
+			skip_before_filter :authorize, :only => [:create, :update, :destroy]
