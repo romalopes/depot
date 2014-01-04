@@ -337,3 +337,253 @@ Add a Dash of Ajax
 		page[:current_item].visual_effect :highlight, :startcolor => "#88ff88", :endcolor => "#114411"
 
 	in layouts/application.html.erb
+
+Check out
+	git checkout -b checkout
+
+	Product 
+			Cart ->	Order
+				\    /
+				Line_Item
+
+
+	$ rails generate scaffold order name:string address:text email:string pay_type:string
+	      invoke  active_record
+      create    db/migrate/20131230025845_create_orders.rb
+      create    app/models/order.rb
+      invoke    test_unit
+      create      test/models/order_test.rb
+      create      test/fixtures/orders.yml
+      invoke  resource_route
+       route    resources :orders
+      invoke  scaffold_controller
+      create    app/controllers/orders_controller.rb
+      invoke    erb
+      create      app/views/orders
+      create      app/views/orders/index.html.erb
+      create      app/views/orders/edit.html.erb
+      create      app/views/orders/show.html.erb
+      create      app/views/orders/new.html.erb
+      create      app/views/orders/_form.html.erb
+      invoke    test_unit
+      create      test/controllers/orders_controller_test.rb
+      invoke    helper
+      create      app/helpers/orders_helper.rb
+      invoke      test_unit
+      create        test/helpers/orders_helper_test.rb
+      invoke    jbuilder
+      create      app/views/orders/index.json.jbuilder
+      create      app/views/orders/show.json.jbuilder
+      invoke  assets
+      invoke    coffee
+      create      app/assets/javascripts/orders.js.coffee
+      invoke    scss
+      create      app/assets/stylesheets/orders.css.scss
+      invoke  scss
+   identical    app/assets/stylesheets/scaffolds.css.scss
+
+
+	$ rails generate migration add_order_id_to_line_item order_id:integer
+	      invoke  active_record
+      create    db/migrate/20131230025942_add_order_id_to_line_item.rb
+
+      $ rake db:migrate
+
+
+
+	Pagination
+		in gemfile
+			gem 'will_paginate', '>= 3.0.pre'
+		$ bundle install
+		Create some orders in depot/script/load_orders.rb
+				Order.transaction do
+					(1..100).each do |i|
+						Order.create(:name => "Customer #{i}" , :address => " #{i} Main Street" ,
+							:email => "customer- #{i}@example.com" , :pay_type => "Check" )
+					end
+				end
+		$ rails runner script/load_orders.rb
+		in controllers/orders_controller.rb
+			def index
+				@orders = Order.paginate :page=>params[:page], :order=>'created_at desc' , :per_page => 10
+				respond_to do |format|
+					format.html # index.html.erb
+					format.xml { render :xml => @orders }
+				end
+			end
+		in app/views/orders/index.html.erb
+			<p><%= will_paginate @orders %></p>
+
+	Sending email
+		Three parts
+			configuring how e-mail is to be sent
+			determining when to send the e-mail
+			specifying what you want to say.
+		Configuring
+			in config/environments/development.rb
+				config.action_mailer.delivery_method = :smtp
+				config.action_mailer.smtp_settings = {
+				    :address => "smtp.gmail.com" ,
+				    :port => 587,
+				    :domain => "domain.of.sender.net" ,
+				    :authentication => "plain" ,
+				    :user_name => "dave" ,
+				    :password => "secret" ,
+				    :enable_starttls_auto => true
+				}
+		Send e-mail
+			Generate the mailer that works like the Controller.  Intead of rendering, it "mail :to"
+			$ rails generate mailer Notifier order_received order_shipped
+
+				create  app/mailers/notifier.rb
+    			  invoke  erb
+			      create    app/views/notifier
+			      create    app/views/notifier/order_received.text.erb
+			      create    app/views/notifier/order_shipped.text.erb
+			      invoke  test_unit
+			      create    test/mailers/notifier_test.rb
+			In the created file app/mailers/notifier.rb
+				class Notifier < ActionMailer::Base
+					default :from => 'Sam Ruby <depot@example.com>'
+					en.notifier.order_received.subject
+					def order_received
+						@greeting = "Hi"
+						mail :to => "to@example.org"
+					end
+					def order_shipped
+						@greeting = "Hi"
+						mail :to => "to@example.org"
+					end
+				end
+		E-mail template
+			In app/vies/notifier/order_received.text.erb
+
+		Integration test
+			$ rails generate integration_test user_stories
+			      invoke  test_unit
+			      create    test/integration/user_stories_test.rb
+
+Logging in
+	Adding Users
+		Create model and database table to hold administrator, username and password
+			Password will be stored in a 256-bit SHA2.
+			$ rails generate scaffold user name:string hashed_password:string salt:string
+		      invoke  active_record
+		      create    db/migrate/20140103064302_create_users.rb
+		      create    app/models/user.rb
+		      invoke    test_unit
+		      create      test/models/user_test.rb
+		      create      test/fixtures/users.yml
+		      invoke  resource_route
+		       route    resources :users
+		      invoke  scaffold_controller
+		      create    app/controllers/users_controller.rb
+		      invoke    erb
+		      create      app/views/users
+		      create      app/views/users/index.html.erb
+		      create      app/views/users/edit.html.erb
+		      create      app/views/users/show.html.erb
+		      create      app/views/users/new.html.erb
+		      create      app/views/users/_form.html.erb
+		      invoke    test_unit
+		      create      test/controllers/users_controller_test.rb
+		      invoke    helper
+		      create      app/helpers/users_helper.rb
+		      invoke      test_unit
+		      create        test/helpers/users_helper_test.rb
+		      invoke    jbuilder
+		      create      app/views/users/index.json.jbuilder
+		      create      app/views/users/show.json.jbuilder
+		      invoke  assets
+		      invoke    coffee
+		      create      app/assets/javascripts/users.js.coffee
+		      invoke    scss
+		      create      app/assets/stylesheets/users.css.scss
+		      invoke  scss
+		      identical    app/assets/stylesheets/scaffolds.css.scss
+
+		$ rake db:migrate
+
+		app/models/user.rb
+			class User < ActiveRecord::Base
+				validates :name, :presence => true, :uniqueness => true
+
+				validates :password, :confirmation => true
+				attr_accessor 	:password_confirmation
+				attr_reader 	:password
+
+				validate		:password_must_be_present
+				private
+					def password_must_be_present
+						errors.add(:password, "Missing password" ) unless hashed_password.present?
+					end
+			end
+
+	Authenticating Users
+		$ rails generate controller sessions new create destroy
+			 identical  app/controllers/sessions_controller.rb
+		       route  get "sessions/destroy"
+		       route  get "sessions/create"
+		       route  get "sessions/new"
+		      invoke  erb
+		       exist    app/views/sessions
+		   identical    app/views/sessions/new.html.erb
+		   identical    app/views/sessions/create.html.erb
+		   identical    app/views/sessions/destroy.html.erb
+		      invoke  test_unit
+		   identical    test/controllers/sessions_controller_test.rb
+		      invoke  helper
+		   identical    app/helpers/sessions_helper.rb
+		      invoke    test_unit
+		   identical      test/helpers/sessions_helper_test.rb
+		      invoke  assets
+		      invoke    coffee
+		   identical      app/assets/javascripts/sessions.js.coffee
+		      invoke    scss
+		   identical      app/assets/stylesheets/sessions.css.scss
+
+		$ rails generate controller admin index
+	      create  app/controllers/admin_controller.rb
+	       route  get "admin/index"
+	      invoke  erb
+	      create    app/views/admin
+	      create    app/views/admin/index.html.erb
+	      invoke  test_unit
+	      create    test/controllers/admin_controller_test.rb
+	      invoke  helper
+	      create    app/helpers/admin_helper.rb
+	      invoke    test_unit
+	      create      test/helpers/admin_helper_test.rb
+	      invoke  assets
+	      invoke    coffee
+	      create      app/assets/javascripts/admin.js.coffee
+	      invoke    scss
+	      create      app/assets/stylesheets/admin.css.scss
+
+	In controllers/sessions_controller.rb
+		def create
+			if user = User.authenticate(params[:name], params[:password])
+				session[:user_id] = user.id
+				redirect_to admin_url
+			else
+				redirect_to login_url, :alert => "Invalid user/password combination"
+			end
+		end
+
+	Limiting Access		
+	  In application_controller.rb
+	  	before_filter :authorize
+
+	  	protected
+  			def authorize
+    			unless User.find_by_id(session[:user_id])
+      				redirect_to login_url, :notice => "Please log in"
+    			end
+  			end
+
+  	If you don't want to pass this filter use:
+  		class StoreController < ApplicationController
+			skip_before_filter :authorize
+
+		class SessionsController < ApplicationController
+			skip_before_filter :authorize

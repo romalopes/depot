@@ -37,7 +37,8 @@ class LineItemsControllerTest < ActionController::TestCase
     end
     assert_response :success
     assert_select_rjs :replace_html, 'cart' do
-    assert_select 'tr#current_item td' , /Programming Ruby 1.9/
+      assert_select 'tr#current_item td' , /Programming Ruby 1.9/
+    end
   end
 
   test "should show line_item" do
@@ -59,9 +60,6 @@ class LineItemsControllerTest < ActionController::TestCase
     assert_difference('LineItem.count', -1) do
       delete :destroy, id: @line_item
     end
-
     assert_redirected_to line_items_path
   end
-
-  
 end
