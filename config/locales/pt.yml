@@ -1,0 +1,44 @@
+pt:
+  layouts:
+    application:
+      title: "Pragmatic Bookshelf"
+      home: "Inicio"
+      questions: "Questões"
+      news: "Notícias"
+      contact: "Contato"
+
+  carts:
+    cart:
+      title: "Carrinho de Compras"
+      empty: "Esvaziar carrinho"
+      checkout: "Comprar"
+  number:
+    currency:
+      format:
+        unit: "BRL$"
+        precision: 2
+        separator: ","
+        delimiter: "."
+        format: "%n&nbsp;%u"
+  orders:
+    new:
+      legend: "Entre os seus detalhes"
+    form:
+      name: "Nome"
+      address_html: "Endereço"
+      email: "E-mail"
+      pay_type: "Pagar com"
+      pay_prompt_html: "Escolha a forma de pagamento"
+      submit: "Realizar Pedido"
+  activerecord:
+    errors:
+      messages:
+        inclusion: "não est&aacute; incluido na lista"
+        blank: "não pode ficar branco"
+  errors:
+    template:
+      body:  "Problema nos seguintes campos"
+      header:
+        one:  "1 erro impede que %{model} seja salvo."
+        other: "%{count} erros impedem que %{model} seja salvo."
+
